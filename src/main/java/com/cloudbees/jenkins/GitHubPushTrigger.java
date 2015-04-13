@@ -71,8 +71,8 @@ public class GitHubPushTrigger extends Trigger<AbstractProject<?,?>> implements 
     /**
      * Called when a POST is made
      */
-    public void onPost(Map<String, Object> payload) {
-        getDescriptor().queue.execute(new JobWithActionScheduler(payload));
+    public void onPost(String triggeredByUser, Map<String, Object> payload) {
+        getDescriptor().queue.execute(new JobWithActionScheduler(triggeredByUser, payload));
     }
 
     /**
@@ -344,8 +344,8 @@ public class GitHubPushTrigger extends Trigger<AbstractProject<?,?>> implements 
     public class JobWithActionScheduler extends JobScheduler {
         private final Map<String, Object> payload;
 
-        public JobWithActionScheduler(Map<String, Object> payload) {
-            super("");
+        public JobWithActionScheduler(String triggeredByUser, Map<String, Object> payload) {
+            super(triggeredByUser);
             this.payload = payload;
         }
 

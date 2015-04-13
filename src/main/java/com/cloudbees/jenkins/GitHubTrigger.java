@@ -23,7 +23,7 @@ public interface GitHubTrigger {
     // TODO: document me
     public void onPost(String triggeredByUser);
 
-    public void onPost(Map<String, Object> payload);
+    public void onPost(String triggeredByUser, Map<String, Object> payload);
     /**
      * Obtains the list of the repositories that this trigger is looking at.
      *
