@@ -1,5 +1,7 @@
 package com.cloudbees.jenkins;
 
+import com.coravy.hudson.plugins.github.VariableInjectionAction;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.Extension;
 import hudson.Util;
 import hudson.console.AnnotatedLargeText;
@@ -24,12 +26,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.interfaces.RSAPublicKey;
 import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -68,58 +65,14 @@ public class GitHubPushTrigger extends Trigger<AbstractProject<?,?>> implements 
      * Called when a POST is made.
      */
     public void onPost(String triggeredByUser) {
-        final String pushBy = triggeredByUser;
-        getDescriptor().queue.execute(new Runnable() {
-            private boolean runPolling() {
-                try {
-                    StreamTaskListener listener = new StreamTaskListener(getLogFile());
+        getDescriptor().queue.execute(new JobScheduler(triggeredByUser));
+    }
 
-                    try {
-                        PrintStream logger = listener.getLogger();
-                        long start = System.currentTimeMillis();
-                        logger.println("Started on "+ DateFormat.getDateTimeInstance().format(new Date()));
-                        boolean result = job.poll(listener).hasChanges();
-                        logger.println("Done. Took "+ Util.getTimeSpanString(System.currentTimeMillis()-start));
-                        if(result)
-                            logger.println("Changes found");
-                        else
-                            logger.println("No changes");
-                        return result;
-                    } catch (Error e) {
-                        e.printStackTrace(listener.error("Failed to record SCM polling"));
-                        LOGGER.log(Level.SEVERE,"Failed to record SCM polling",e);
-                        throw e;
-                    } catch (RuntimeException e) {
-                        e.printStackTrace(listener.error("Failed to record SCM polling"));
-                        LOGGER.log(Level.SEVERE,"Failed to record SCM polling",e);
-                        throw e;
-                    } finally {
-                        listener.close();
-                    }
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE,"Failed to record SCM polling",e);
-                }
-                return false;
-            }
-
-            public void run() {
-                if (runPolling()) {
-                    String name = " #"+job.getNextBuildNumber();
-                    GitHubPushCause cause;
-                    try {
-                        cause = new GitHubPushCause(getLogFile(), pushBy);
-                    } catch (IOException e) {
-                        LOGGER.log(Level.WARNING, "Failed to parse the polling log",e);
-                        cause = new GitHubPushCause(pushBy);
-                    }
-                    if (job.scheduleBuild(cause)) {
-                        LOGGER.info("SCM changes detected in "+ job.getName()+". Triggering "+name);
-                    } else {
-                        LOGGER.info("SCM changes detected in "+ job.getName()+". Job is already in the queue");
-                    }
-                }
-            }
-        });
+    /**
+     * Called when a POST is made
+     */
+    public void onPost(Map<String, Object> payload) {
+        getDescriptor().queue.execute(new JobWithActionScheduler(payload));
     }
 
     /**
@@ -326,6 +279,92 @@ public class GitHubPushTrigger extends Trigger<AbstractProject<?,?>> implements 
 
         public static boolean allowsHookUrlOverride() {
             return ALLOW_HOOKURL_OVERRIDE;
+        }
+    }
+
+    public class JobScheduler implements Runnable {
+        protected final String pushBy;
+
+        public JobScheduler(String triggeredByUser) {
+            pushBy = triggeredByUser;
+        }
+
+        protected boolean runPolling() {
+            try {
+                StreamTaskListener listener = new StreamTaskListener(getLogFile());
+                LOGGER.info("Polling: " + job.toString());
+
+                try {
+                    PrintStream logger = listener.getLogger();
+                    long start = System.currentTimeMillis();
+                    logger.println("Started on "+ DateFormat.getDateTimeInstance().format(new Date()));
+                    boolean result = job.poll(listener).hasChanges();
+                    logger.println("Done. Took "+ Util.getTimeSpanString(System.currentTimeMillis()-start));
+                    if(result)
+                        logger.println("Changes found");
+                    else
+                        logger.println("No changes");
+                    return result;
+                } catch (Error e) {
+                    e.printStackTrace(listener.error("Failed to record SCM polling"));
+                    LOGGER.log(Level.SEVERE,"Failed to record SCM polling",e);
+                    throw e;
+                } catch (RuntimeException e) {
+                    e.printStackTrace(listener.error("Failed to record SCM polling"));
+                    LOGGER.log(Level.SEVERE,"Failed to record SCM polling",e);
+                    throw e;
+                } finally {
+                    listener.close();
+                }
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE,"Failed to record SCM polling",e);
+            }
+            return false;
+        }
+
+        public void run() {
+            if (runPolling()) {
+                String name = " #"+job.getNextBuildNumber();
+                GitHubPushCause cause;
+                try {
+                    cause = new GitHubPushCause(getLogFile(), pushBy);
+                } catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "Failed to parse the polling log",e);
+                    cause = new GitHubPushCause(pushBy);
+                }
+                if (job.scheduleBuild(cause)) {
+                    LOGGER.info("SCM changes detected in "+ job.getName()+". Triggering "+name);
+                } else {
+                    LOGGER.info("SCM changes detected in "+ job.getName()+". Job is already in the queue");
+                }
+            }
+        }
+    }
+
+    public class JobWithActionScheduler extends JobScheduler {
+        private final Map<String, Object> payload;
+
+        public JobWithActionScheduler(Map<String, Object> payload) {
+            super("");
+            this.payload = payload;
+        }
+
+        @Override
+        public void run() {
+            String name = " #"+job.getNextBuildNumber();
+            GitHubPushCause cause;
+            try {
+                cause = new GitHubPushCause(getLogFile(), pushBy);
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Failed to parse the polling log",e);
+                cause = new GitHubPushCause(pushBy);
+            }
+
+            if (job.scheduleBuild(0, cause, new VariableInjectionAction(payload))) {
+                LOGGER.info("SCM changes detected in "+ job.getName()+". Triggering "+name);
+            } else {
+                LOGGER.info("SCM changes detected in "+ job.getName()+". Job is already in the queue");
+            }
         }
     }
 

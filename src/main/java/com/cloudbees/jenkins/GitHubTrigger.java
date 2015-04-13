@@ -6,6 +6,7 @@ import hudson.model.AbstractProject;
 import hudson.triggers.Trigger;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -21,6 +22,8 @@ public interface GitHubTrigger {
 
     // TODO: document me
     public void onPost(String triggeredByUser);
+
+    public void onPost(Map<String, Object> payload);
     /**
      * Obtains the list of the repositories that this trigger is looking at.
      *

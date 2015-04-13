@@ -211,7 +211,7 @@ public class GitHubWebHook implements UnprotectedRootAction {
                         LOGGER.fine("Considering to poke "+job.getFullDisplayName());
                         if (GitHubRepositoryNameContributor.parseAssociatedNames(job).contains(changedRepository)) {
                             LOGGER.info("Poked "+job.getFullDisplayName());
-                            trigger.onPost(pusherName);
+                            trigger.onPost(o);
                         } else
                             LOGGER.fine("Skipped "+job.getFullDisplayName()+" because it doesn't have a matching repository.");
                     }
