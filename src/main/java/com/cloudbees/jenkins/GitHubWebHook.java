@@ -204,9 +204,9 @@ public class GitHubWebHook implements UnprotectedRootAction {
             // happen at some random time anyway.
             Authentication old = SecurityContextHolder.getContext().getAuthentication();
             SecurityContextHolder.getContext().setAuthentication(ACL.SYSTEM);
-            Boolean branchFound = false;
             try {
                 for (AbstractProject<?,?> job : Hudson.getInstance().getAllItems(AbstractProject.class)) {
+                    Boolean branchFound = false;
                     GitHubTrigger trigger = (GitHubTrigger) job.getTrigger(triggerClass);
                     if (trigger!=null) {
                         LOGGER.fine("Considering to poke "+job.getFullDisplayName());
