@@ -40,6 +40,8 @@ public interface GitHubTrigger {
      */
     public Set<GitHubRepositoryName> getGitHubRepositories();
 
+    public String getBranchFilter();
+
     /**
      * Contributes {@link GitHubRepositoryName} from {@link GitHubTrigger#getGitHubRepositories()}
      * for backward compatibility

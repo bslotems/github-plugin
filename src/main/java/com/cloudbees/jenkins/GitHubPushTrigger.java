@@ -49,8 +49,15 @@ import javax.inject.Inject;
  * @author Kohsuke Kawaguchi
  */
 public class GitHubPushTrigger extends Trigger<AbstractProject<?,?>> implements GitHubTrigger {
+    private final String branchFilter;
+
     @DataBoundConstructor
-    public GitHubPushTrigger() {
+    public GitHubPushTrigger(String branchFilter) {
+        this.branchFilter = branchFilter;
+    }
+
+    public String getBranchFilter() {
+        return branchFilter;
     }
 
     /**

@@ -204,14 +204,43 @@ public class GitHubWebHook implements UnprotectedRootAction {
             // happen at some random time anyway.
             Authentication old = SecurityContextHolder.getContext().getAuthentication();
             SecurityContextHolder.getContext().setAuthentication(ACL.SYSTEM);
+            Boolean branchFound = false;
             try {
                 for (AbstractProject<?,?> job : Hudson.getInstance().getAllItems(AbstractProject.class)) {
                     GitHubTrigger trigger = (GitHubTrigger) job.getTrigger(triggerClass);
                     if (trigger!=null) {
                         LOGGER.fine("Considering to poke "+job.getFullDisplayName());
                         if (GitHubRepositoryNameContributor.parseAssociatedNames(job).contains(changedRepository)) {
-                            LOGGER.info("Poked "+job.getFullDisplayName());
-                            trigger.onPost(pusherName, o);
+                            String branchFilter = trigger.getBranchFilter();
+
+                            if (branchFilter != null && !branchFilter.trim().equals("")) {
+                                // Branches are being filtered so go through the filters and make sure
+                                // the pushed to ref matches one of the filters
+                                LOGGER.info("Branch filter: " + trigger.getBranchFilter());
+                                String[] filters = branchFilter.split(",");
+                                String ref = o.getString("ref").trim().replaceAll(".*/", "");
+                                LOGGER.info("ref to match: " + ref);
+
+                                for (String filter : filters) {
+                                    Pattern filterPattern = Pattern.compile(filter);
+                                    Matcher m = filterPattern.matcher(ref);
+
+                                    if (m.matches()) {
+                                        LOGGER.info("Filtered branch found, poking.");
+                                        branchFound = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else {
+                                // No specific branches are being filtered so go ahead and poke.
+                                branchFound = true;
+                            }
+
+                            if (branchFound) {
+                                LOGGER.info("Poked " + job.getFullDisplayName());
+                                trigger.onPost(pusherName, o);
+                            }
                         } else
                             LOGGER.fine("Skipped "+job.getFullDisplayName()+" because it doesn't have a matching repository.");
                     }
