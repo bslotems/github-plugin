@@ -216,7 +216,7 @@ public class GitHubWebHook implements UnprotectedRootAction {
                             if (branchFilter != null && !branchFilter.trim().equals("")) {
                                 // Branches are being filtered so go through the filters and make sure
                                 // the pushed to ref matches one of the filters
-                                LOGGER.info("Branch filter: " + trigger.getBranchFilter());
+                                LOGGER.info("Branch filter: " + branchFilter);
                                 String[] filters = branchFilter.split(",");
                                 String ref = o.getString("ref").trim().replaceAll(".*/", "");
                                 LOGGER.info("ref to match: " + ref);
