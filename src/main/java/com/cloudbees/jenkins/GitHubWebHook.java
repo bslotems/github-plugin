@@ -207,11 +207,29 @@ public class GitHubWebHook implements UnprotectedRootAction {
             try {
                 for (AbstractProject<?,?> job : Hudson.getInstance().getAllItems(AbstractProject.class)) {
                     Boolean branchFound = false;
+                    Boolean blacklisted = false;
                     GitHubTrigger trigger = (GitHubTrigger) job.getTrigger(triggerClass);
                     if (trigger!=null) {
                         LOGGER.fine("Considering to poke "+job.getFullDisplayName());
                         if (GitHubRepositoryNameContributor.parseAssociatedNames(job).contains(changedRepository)) {
                             String branchFilter = trigger.getBranchFilter();
+                            String userBlacklist = trigger.getUserBlacklist();
+
+                            if (userBlacklist != null && !userBlacklist.trim().equals("")) {
+                                // If userBlacklist contains pusherName then don't trigger the build
+                                LOGGER.info("User blacklist: " + userBlacklist);
+                                String[] blacklistedUsers = userBlacklist.split(",");
+
+                                for (String user : blacklistedUsers) {
+                                    if (user.equals(pusherName)) {
+                                        LOGGER.info("Push by blacklisted user. Not poking.");
+                                        blacklisted = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (blacklisted) { continue; }
 
                             if (branchFilter != null && !branchFilter.trim().equals("")) {
                                 // Branches are being filtered so go through the filters and make sure

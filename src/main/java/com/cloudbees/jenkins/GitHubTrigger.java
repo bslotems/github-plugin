@@ -41,6 +41,7 @@ public interface GitHubTrigger {
     public Set<GitHubRepositoryName> getGitHubRepositories();
 
     public String getBranchFilter();
+    public String getUserBlacklist();
 
     /**
      * Contributes {@link GitHubRepositoryName} from {@link GitHubTrigger#getGitHubRepositories()}

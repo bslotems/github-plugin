@@ -50,14 +50,20 @@ import javax.inject.Inject;
  */
 public class GitHubPushTrigger extends Trigger<AbstractProject<?,?>> implements GitHubTrigger {
     private final String branchFilter;
+    private final String userBlacklist;
 
     @DataBoundConstructor
-    public GitHubPushTrigger(String branchFilter) {
+    public GitHubPushTrigger(String branchFilter, String userBlacklist) {
         this.branchFilter = branchFilter;
+        this.userBlacklist = userBlacklist;
     }
 
     public String getBranchFilter() {
         return branchFilter;
+    }
+
+    public String getUserBlacklist() {
+        return userBlacklist;
     }
 
     /**
